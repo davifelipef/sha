@@ -1,4 +1,23 @@
-{% extends "base.html" %} {% block title %} Página Inicial {% endblock %}
+{% extends "base.html" %} {% block title %} SHA - Sistema de Históricos Automatizados {% endblock %}
+{% load static %}
 {% block content %}
-<p>Essa é a página inicial.</p>
+<main class="content">
+    <h1>SHA - Página Inicial</h1>
+    <section>
+            <div class ="image_box">
+                <div class="image_container">
+                 <a href="">
+                    <img src="{% static 'add.png' %}" class="menu" alt="Ícone representando um menu.">
+                    <p>Importar Ata</p>
+                </a>
+                </div>
+                <div class="image_container">
+                    <a href="">
+                        <img src="{% static 'download.png' %}" class="registration" alt="Ícone representando uma ficha de cadastro">
+                        <p>Emitir Histórico</p>
+                    </a>
+                </div>
+            </div>
+    </section>
+</main>
 {% endblock %}
