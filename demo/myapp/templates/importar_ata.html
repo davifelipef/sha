@@ -1,0 +1,23 @@
+{% extends "base.html" %} {% block title %} SHA - Sistema de Históricos Automatizados {% endblock %}
+{% load static %}
+{% block content %}
+<main class="content">
+    <h1>Importar Ata</h1>
+        <section>
+            <div>
+                <p>Utilize o botão abaixo para importar 
+                    a sua ata de resultado final e assim
+                    adicionar as informações ao banco de dados.</p>
+            </div>
+            <br>
+            <div class ="form_box">
+                <div class="form_container">
+                    <form action="">
+                        <input type="file" id="" name="filename">
+                        <p><input type="submit" id="addButton" value="Enviar"></p>
+                        </form>
+                </div>
+            </div>
+        </section>
+</main>
+{% endblock %}
