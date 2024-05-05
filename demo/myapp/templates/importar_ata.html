@@ -1,4 +1,5 @@
-{% extends "base.html" %} {% block title %} SHA - Sistema de Históricos Automatizados {% endblock %}
+{% extends "base.html" %}
+{% block title %} SHA - Sistema de Históricos Automatizados {% endblock %}
 {% load static %}
 {% block content %}
 <main class="content">
@@ -12,12 +13,17 @@
             <br>
             <div class ="form_box">
                 <div class="form_container">
-                    <form action="">
+                    <form action="{% url 'importar_ata' %}" method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
                         <input type="file" id="" name="filename">
-                        <p><input type="submit" id="addButton" value="Enviar"></p>
-                        </form>
+                        <button type="submit" id="addButton">Enviar</button>
+                    </form>
                 </div>
             </div>
         </section>
+        <div id="mensagem-confirmacao" style="display: none;">
+            <h3>Ata importada com sucesso!</h3>
+            <button onclick="fecharMensagem()">OK</button>
+        </div>
 </main>
 {% endblock %}

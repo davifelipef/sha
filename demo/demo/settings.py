@@ -37,7 +37,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    "myapp"
+    "myapp",
+    "import_export",
+    "import_export_extensions",
 ]
 
 MIDDLEWARE = [
