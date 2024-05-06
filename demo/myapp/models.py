@@ -22,9 +22,6 @@ class AtaResultados(models.Model):
     nt_qui = models.CharField(max_length=3, validators=[RegexValidator('^[0-9]|S/N|EP|ES$', 'Nota inválida')], verbose_name='Química')
     nt_soc = models.CharField(max_length=3, validators=[RegexValidator('^[0-9]|S/N|EP|ES$', 'Nota inválida')], verbose_name='Sociologia')
     nt_tec = models.CharField(max_length=3, validators=[RegexValidator('^[0-9]|S/N|EP|ES$', 'Nota inválida')], verbose_name='Tecnologia')
-
-    def __str__(self):
-        return self.name
     
 class TodoItem(models.Model):
     title = models.CharField(max_length=200)
