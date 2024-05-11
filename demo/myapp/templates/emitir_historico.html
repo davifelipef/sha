@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %} SHA - Sistema de Históricos Automatizados {% endblock %}
+{% load static %}
+{% block content %}
+<main class="content">
+  <h1>Emitir Histórico Escolar Pré-Prenchido</h1>
+  <form id="historicoForm" method="post">
+    {% csrf_token %}
+    <label for="ano">Ano:</label>
+    <select id="ano" name="ano">
+      <option value="">Selecionar Ano</option>
+      {% for ano in anos %}
+        <option value="{{ ano }}">{{ ano }}</option>
+      {% endfor %}
+    </select>
+
+    <label for="turma">Turma:</label>
+    <select id="turma" name="turma">
+      <option value="">Selecionar Turma</option>
+      {% if turmas != "Selecionar Turma" %}
+        {% for turma in turmas %}
+          <option value="{{ turma.turma }}">{{ turma.turma }}</option>
+        {% endfor %}
+      {% endif %}
+    </select>
+
+    <label for="aluno">Aluno:</label>
+    <select id="aluno" name="aluno">
+      <option value="">Selecionar Aluno</option>
+    </select>
+  </form>
+  <br>
+  <div id="resultados">
+    <table class="centered-table">
+      <thead>
+        <tr>
+          <th>Disciplina</th>
+          <th>Notas</th>
+        </tr>
+      </thead>
+      <tr>
+        <th>Arte</th> 
+        <td><span id="grade_art"></span></td> 
+      </tr>
+      <tr>
+        <th>Biologia</th>
+        <td><span id="grade_bio"></span></td>
+      </tr>
+      </table>
+  </div>
+</main>
+{% endblock %}

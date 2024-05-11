@@ -110,9 +110,6 @@
         width: 3em;
         text-align: center;
     }
-    .centered-table {
-        margin: 0 auto; 
-    }
     .button {
         padding: 1em 0.5em;
     }
@@ -299,9 +296,6 @@
     .i_weight {
         width: 3em;
         text-align: center;
-    }
-    .centered-table {
-        margin: 0 auto; 
     }
     .button {
         padding: 1em 0.5em;
