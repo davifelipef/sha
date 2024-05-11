@@ -1,3 +1,5 @@
+import os
+from django.conf import settings
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import render, HttpResponse, redirect
@@ -114,40 +116,52 @@ def processar_e_salvar_dados(uploaded_file):
             registro_estudante.save()
 
 def emitir_historico(request):
-  anos = AtaResultados.objects.values_list('ano', flat=True).distinct()
-  turmas = AtaResultados.objects.values_list('turma', flat=True).distinct()
+    anos = AtaResultados.objects.values_list('ano', flat=True).distinct()
+    turmas = AtaResultados.objects.values_list('turma', flat=True).distinct()
 
+    if request.method == 'POST':
+        print("Método POST acessado")
+        selected_ano = request.POST.get('ano')
+
+        if selected_ano:
+            turmas = AtaResultados.objects.filter(ano=selected_ano).values('turma').distinct()
+            print("Lista de turmas", turmas)
+        else:
+            turmas = "Selecionar Turma"  # Set turmas to empty list if no ano is selected
+            alunos = "Selecionar Aluno"
+
+        if request.POST.get('turma'):  # Check if turma is also selected in the form
+            alunos = AtaResultados.objects.filter(turma=request.POST.get('turma')).values('aluno').distinct()
+            return render(request, 'emitir_historico.html', {'anos': anos, 'selected_ano': selected_ano, 'turmas': turmas, 'alunos': alunos})
+    elif request.method == 'GET':
+        print("Método GET acessado")
+        selected_ano = request.GET.get('ano')
+
+        if selected_ano:
+            print("Ano", selected_ano, "selecionado como filtro")
+            turmas = AtaResultados.objects.filter(ano=selected_ano).values('turma').distinct()
+            print("Turmas filtradas:", turmas)
+            # Filter alunos based on turma (and potentially ano)
+            alunos = AtaResultados.objects.filter(turma__in=turmas).values('aluno', 'nt_art', 'nt_bio', 'nt_edf', 'nt_fil', 'nt_fis', 'nt_geo', 'nt_his', 'nt_lin', 'nt_lpt', 'nt_mat', 'nt_pro', 'nt_qui', 'nt_soc', 'nt_tec')
+            data = {'turmas': list(turmas), 'alunos': list(alunos)}
+            #print("Dados recuperados:", data)
+            return JsonResponse(data, safe=False)
+        else:
+            turmas = "Selecionar Turma"  # Set turmas to empty list if no ano is selected
+            alunos = "Selecionar Aluno"
+
+        return render(request, 'emitir_historico.html', {'anos': anos, 'selected_ano': selected_ano, 'turmas': turmas, 'alunos': alunos})
+
+def upload_file(request):
   if request.method == 'POST':
-    print("Método POST acessado")
-    selected_ano = request.POST.get('ano')
-    # Check if selected_ano is empty before using it in filters
-    if selected_ano:
-      turmas = AtaResultados.objects.filter(ano=selected_ano).values('turma').distinct()
-      print("Lista de turmas", turmas)
-    else:
-      turmas = "Selecionar Turma"  # Set turmas to empty list if no ano is selected
-    alunos = "Selecionar Aluno"
-    if request.POST.get('turma'):  # Check if turma is also selected in the form
-      alunos = AtaResultados.objects.filter(turma=request.POST.get('turma')).values('aluno').distinct()
-
-    return render(request, 'emitir_historico.html', {'anos': anos, 'selected_ano': selected_ano, 'turmas': turmas, 'alunos': alunos})
-
-  elif request.method == 'GET':
-    print("Método GET acessado")
-    selected_ano = request.GET.get('ano')
-    print("Ano a ser pesquisado:", selected_ano)
-    if selected_ano:
-      print("Ano", selected_ano, "selecionado como filtro")
-      turmas = AtaResultados.objects.filter(ano=selected_ano).values('turma').distinct()
-      print("Turmas filtradas:", turmas)
-      # Filter alunos based on turma (and potentially ano)
-      alunos = AtaResultados.objects.filter(turma__in=turmas).values('aluno').distinct()
-      # Prepare a dictionary containing both turmas and alunos data
-      data = {'turmas': list(turmas), 'alunos': list(alunos)}
-      # Return JSON response with the data dictionary
-      return JsonResponse(data, safe=False)
-    else:
-      turmas = "Selecionar Turma"  # Set turmas to empty list if no ano is selected
-      alunos = "Selecionar Aluno"
-
-    return render(request, 'emitir_historico.html', {'anos': anos, 'selected_ano': selected_ano, 'turmas': turmas, 'alunos': alunos})
+    uploaded_file = request.FILES['file']
+    # Validate file extension
+    if not uploaded_file.name.endswith('.xlsx'):
+      return render(request, 'upload.html', {'error': 'Formato de arquivo inválido. O formato aceito é .xlsx.'})
+    # Save the file with a fixed name (overwrite if exists)
+    filename = 'modelo_historico_em.xlsx'  # Replace with your desired name
+    with open(os.path.join(settings.MEDIA_ROOT, filename), 'wb+') as destination:
+      for chunk in uploaded_file.chunks():
+        destination.write(chunk)
+    return render(request, 'upload_file.html', {'success': 'Sucesso  no upload do arquivo!'})
+  return render(request, 'upload_file.html')

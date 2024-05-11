@@ -12,6 +12,12 @@
                 </a>
                 </div>
                 <div class="image_container">
+                    <a href="{% url 'upload_file' %}">
+                       <img src="{% static 'add.png' %}" class="menu" alt="Ícone representando um menu.">
+                       <p>Upload de Modelo de Histórico</p>
+                   </a>
+                   </div>
+                <div class="image_container">
                     <a href="{% url 'emitir_historico' %}">
                         <img src="{% static 'download.png' %}" class="registration" alt="Ícone representando uma ficha de cadastro">
                         <p>Emitir Histórico</p>

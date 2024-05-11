@@ -17,6 +17,7 @@ $(document).ready(function() {
           $("#turma").empty(); // Clear previous turma options
           $("#turma").append('<option value="">Selecionar Turma</option>');
           for (var i = 0; i < data.turmas.length; i++) {
+            // **Option structure as requested**
             var option = `<option value="${data.turmas[i].turma}">${data.turmas[i].turma}</option>`;
             console.log("Opção adiconada à lista:", option);
             $("#turma").append(option);
@@ -40,54 +41,66 @@ $(document).ready(function() {
     console.log("Turma selecionada para o aluno:", selectedTurma)
     if (selectedTurma) {
       console.log("Recuperação de aluno iniciada");
-        $.ajax({
-          url: '/emitir_historico/', // Replace with your actual view URL
-          type: 'GET',
-          data: { ano: selectedAno, turma: selectedTurma }, // Send data as query parameters
-          success: function(data) {
-            console.log("Sucesso na recuperação de aluno:", data);
-            console.log("Lista de Alunos:", data.alunos)
-        
-            // Existing code to populate aluno dropdown
-            $("#aluno").empty(); // Clear previous aluno options
-            $("#aluno").append('<option value="">Selecionar Aluno</option>');
-            for (var i = 0; i < data.alunos.length; i++) {
-              var option = `<option value="${data.alunos[i].id}">${data.alunos[i].aluno}</option>`;
-              console.log("Alunos recuperados corretamente")
-              //console.log("Opção adiconada à lista:", option);
-              $("#aluno").append(option);
-            }
+      $.ajax({
+        url: '/emitir_historico/', // Replace with your actual view URL
+        type: 'GET',
+        data: { ano: selectedAno, turma: selectedTurma }, // Send data as query parameters
+        success: function(data) {
+          console.log("Sucesso na recuperação de aluno:", data);
+          console.log("Lista de Alunos:", data.alunos)
+ 
+          // Existing code to populate aluno dropdown
+          $("#aluno").empty(); // Clear previous aluno options
+          $("#aluno").append('<option value="">Selecionar Aluno</option>');
+          for (var i = 0; i < data.alunos.length; i++) {
+            var option = `<option value="${data.alunos[i].aluno}">${data.alunos[i].aluno}</option>`;
+            console.log("Alunos recuperados corretamente")
+            //console.log("Opção adiconada à lista:", option);
+            $("#aluno").append(option);
+          }
+  
+  // Recuperação das notas armazenadas no banco de dados para o aluno selecionado
+  $("#aluno").change(function() {
+    var selectedAno = $("#ano").val();
+    console.log("Ano selecionado para o aluno:", selectedAno);
+    var selectedTurma = $("turma").val();
+    console.log("Turma selecionada para o aluno:", selectedTurma)
+    var selectedAluno =$(this).val();
+    console.log("O aluno selecionado para as notas serem exibidas foi:", selectedAluno)
+    if (selectedAluno) {
+      console.log("Recuperação de notas iniciada");
+      $.ajax({
+        url: '/emitir_historico/', // Replace with your actual view URL
+        type: 'GET',
+        data: { ano: selectedAno, turma: selectedTurma, aluno: selectedAluno }, // Send data as query parameters
+        success: function(data) {
+          console.log("Sucesso na recuperação das notas do aluno:", data);
 
-            var studentData = null;
-        
-            // **New code block for disciplines and grades**
-            if (data.length > 0) {
-              // Access student data (assuming the first element)
-              var studentData = data[0];
-              var tableBody = $("#resultados tbody"); // Get the tbody element
-            
-              // Check if studentData has any fields other than 'aluno' and 'turma' (indicating grades)
-              if (Object.keys(studentData).length > 2) {
-                console.log("Busca de disciplinas e notas iniciada");
-                // Loop through discipline fields and display disciplines and grades
-                for (var field in studentData) {
-                  if (field !== 'aluno' && field !== 'turma') {
-                    var discipline = studentData[field].split("_")[1]; // Extract discipline name
-                    var grade = studentData[field];
-            
-                    // Create and append table row
-                    var tableRow = `<tr>
-                                      <td>${discipline}</td>
-                                      <td>${grade}</td>
-                                    </tr>`;
-                    tableBody.append(tableRow);
-                  }
+          var selectedAluno = $("#aluno").val();
+  
+          for (var i = 0; i < data.alunos.length; i++) {
+            if (data.alunos[i].aluno === selectedAluno) {
+              // Found matching student, update grades
+              var studentGrades = data.alunos[i];
+              for (var subject in studentGrades) {
+                if (subject.startsWith("nt_")) { // Check if key starts with "nt_" (grade)
+                  var gradeElement = $("#grade_" + subject.substring(3)); // Extract subject name
+                  gradeElement.text(studentGrades[subject]);
                 }
-              } else {
-                console.log("A busca por disciplinas e notas não foi iniciada");
-                $("#resultados").html('<p>Nenhum resultado encontrado.</p>');
               }
-            } else {
-              console.log("Um erro ocorreu e a função não foi executada como o planejado");
+              break; // Exit loop after finding the matching student
             }
-}})}})})
+          }
+          
+          }
+        });
+      };
+    });
+  }
+});
+};
+});
+});
+
+          
+              

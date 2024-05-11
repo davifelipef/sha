@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %} SHA - Sistema de Históricos Automatizados {% endblock %}
+{% load static %}
+{% block content %}
+<main class="content">
+    <h1>Importar Modelo de Histórico</h1>
+        <section>
+            <div>
+                <p>Utilize o botão abaixo para importar 
+                    o modelo de histórico do EM (atualmente só há 
+                    suporte ao modelo padrão já armazenado).</p>
+            </div>
+            <br>
+            <div class ="form_box">
+                <div class="form_container">
+                    {% if error %}
+                        <p style="color: red;">{{ error }}</p>
+                    {% endif %}
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <label for="file">Selecionar Arquivo:</label>
+                        <input type="file" name="file" id="file">
+                        <button type="submit">Fazer Upload</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+</main>
+{% endblock %}
