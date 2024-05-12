@@ -3,7 +3,7 @@ import io
 import tempfile
 from django.conf import settings
 from django.db import transaction
-from django.http import JsonResponse, HttpResponse, FileResponse
+from django.http import JsonResponse, HttpResponse, FileResponse, HttpResponseServerError, HttpResponseBadRequest
 from django.shortcuts import render, HttpResponse, redirect
 from django.core.exceptions import ValidationError
 from django.contrib import messages
@@ -203,81 +203,64 @@ def get_subject_row(sheet):
        print("Notas NÃO atribuídas às disciplinas")
   return None
 
+
 def populate_and_download(request):
-  if request.method == 'POST':
-    print("Método de download acessado")
-    selected_ano = request.POST.get('ano')
-    print("Ano selecionado:", selected_ano)
-    selected_turma = request.POST.get('turma')
-    print("Turma selecionada:", selected_turma)
-    selected_aluno = request.POST.get('aluno')
-    print("Aluno selecionado:", selected_aluno)
+    if request.method == 'POST':
+        # Extract data from request
+        selected_ano = request.POST.get('ano')
+        selected_turma = request.POST.get('turma')
+        selected_aluno = request.POST.get('aluno')
 
-    # Open uploaded Excel file (replace with actual filename and path)
-    filename = 'modelo_historico_em.xlsx'  # Replace with your filename
-    print("Modelo de histórico no excel aberto:", filename)
-    wb = load_workbook(os.path.join(settings.MEDIA_ROOT, filename))
-    sheet = wb.active  # Assuming you want to write to the active sheet
+        # Define year indicator mapping
+        year_mapping = {1: (14, 'O'), 2: (15, 'Q'), 3: (16, 'S')}
 
-    # Place student information (access from request.POST if available)
-    student_cell = sheet.cell(row=10, column=4)  # Replace with desired cell for student information
-    student_cell.value = request.POST.get('aluno')  # Assuming student information is in a hidden field
+        try:
+            print("Trying to download the file...")
+            # Open temporary copy of Excel file
+            with open(os.path.join(settings.MEDIA_ROOT, 'modelo_historico_em.xlsx'), 'rb') as f:
+                wb = load_workbook(filename=f, data_only=True)  # Read data only for efficiency
 
-    # Extract the first character (year indicator)
-    year_indicator = int(selected_turma[:1])
+            sheet = wb.active
 
-    # Calculate target row and column for year data based on turma
-    target_row = year_indicator + 13  # Adjust offset if needed (currently O15, Q15, or S15)
-    print("Target row:", target_row)
+            # Update student information
+            sheet.cell(row=10, column=4).value = selected_aluno
 
-    column_letters = ['O', 'Q', 'S']  # Include extra letters for flexibility
+            # Extract year indicator
+            year_indicator = int(selected_turma[:1])
 
-    # Adjust year indicator to match list index (considering offset)
-    adjusted_index = year_indicator - 1
+            # Get target row and column from mapping
+            target_row, target_col = year_mapping.get(year_indicator, (None, None))
 
-    # Check if adjusted index is within valid range
-    if 0 <= adjusted_index < len(column_letters):
-        target_col = column_letters[adjusted_index]
-        print("Target col:", target_col)
-    else:
-        target_col = column_letters[adjusted_index]
-        print("Target col missed:", target_col)
-        print("Invalid year indicator in turma:", year_indicator)
+            # Handle invalid year indicator gracefully
+            if not target_row or not target_col:
+                return HttpResponseBadRequest('Invalid year indicator in turma.')
 
-    # Place grade data
-    for html_element_id, grade_field in grade_fields.items():
-      # Get grade value from the corresponding HTML element ID
-      grade_value = request.POST.get(html_element_id)
-      if grade_value:
-        # Find subject row using the get_subject_row function
-        subject_row = get_subject_row(sheet)
+            # Process grade data (similar logic to your original code)
+            for html_element_id, grade_field in grade_fields.items():
+                grade_value = request.POST.get(html_element_id)
+                if grade_value:
+                    subject_row = get_subject_row(sheet)
+                    if subject_row:
+                        subject_cell = sheet[f"{grade_field}{subject_row}"]
+                        if subject_cell.value and subject_cell.value == grade_field:
+                            grade_cell = sheet.cell(row=subject_cell.row, column=ord(selected_turma[0]))
+                            grade_cell.value = grade_value
 
-        if subject_row:
-          subject_cell = sheet[f"{grade_field}{subject_row}"]
-          # Check if subject cell exists and corresponding field name is available
-          if subject_cell.value and subject_cell.value == grade_field:
-            grade_cell = sheet.cell(row=subject_cell.row, column=ord(selected_turma[0]))  # Adjust cell based on turma
-            grade_cell.value = grade_value
+            # Create a temporary file for the modified data
+            with io.BytesIO() as output_buffer:
+                print("io bytes processed")
+                wb.save(output_buffer)
+                modified_data = output_buffer.getvalue()
+                output_buffer.close()
 
-    # Save the modified Excel file
-    modified_filename = 'modified_historico_em.xlsx'  # Replace with desired filename
-    print("This is the modified filename:", modified_filename)
-    modified_filepath = os.path.join(settings.MEDIA_ROOT, modified_filename)
+            # Set up download response
+            response = FileResponse(modified_data, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = 'attachment; filename="historico.xlsx"'
 
-    # Print the absolute path for verification
-    print(f"Absolute path of saved file: {modified_filepath}")
+            return response
 
-    # Save directly to media root (remove temporary file creation)
-    wb.save(modified_filepath)
+        except Exception as e:
+            print(f"Error processing request: {e}")
+            return HttpResponseServerError('An error occurred while processing your request.')
 
-    # Set up the response (assuming you still want to serve the file for download)
-    #response = FileResponse(open(modified_filepath, 'rb'), as_attachment=True)
-
-    response = HttpResponse(modified_filepath, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-
-    # Return the response
-    print("Response:", response)
-    return response
-
-  # If the request method is not POST, return an empty HttpResponse
-  return HttpResponse()
+    return HttpResponse()
