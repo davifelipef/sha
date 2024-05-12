@@ -96,5 +96,9 @@
       </tr>
       </table>
   </div>
+  <form id="downloadForm" method="post">
+    {% csrf_token %}
+    <button type="submit">Baixar Histórico</button>
+  </form>
 </main>
 {% endblock %}

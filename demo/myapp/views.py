@@ -1,12 +1,18 @@
 import os
+import io
+import tempfile
 from django.conf import settings
 from django.db import transaction
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse, FileResponse
 from django.shortcuts import render, HttpResponse, redirect
 from django.core.exceptions import ValidationError
 from django.contrib import messages
 from django.db.models import Q
+from django.utils.cache import add_never_cache_headers
 from .models import AtaResultados
+from wsgiref.util import FileWrapper
+from openpyxl import load_workbook
+from xlsxwriter import Workbook
 
 # Create your views here.
 
@@ -165,3 +171,113 @@ def upload_file(request):
         destination.write(chunk)
     return render(request, 'upload_file.html', {'success': 'Sucesso  no upload do arquivo!'})
   return render(request, 'upload_file.html')
+
+# Definição do mapeamento notas/disciplinas
+grade_fields = {  
+    'grade_art': 'Arte',
+    'grade_bio': 'Biologia',
+    'grade_edf': 'Educação Física',
+    'grade_fil': 'Filosofia',
+    'grade_fis': 'Fisica',
+    'grade_geo': 'Geografia',
+    'grade_his': 'História',
+    'grade_lin': 'Língua Estrangeira- Inglês',
+    'grade_lpt': 'Língua Portuguesa e Literatura',
+    'grade_mat': 'Matemática',
+    'grade_pro': 'Projeto de Vida',
+    'grade_qui': 'Quimica',
+    'grade_soc': 'Sociologia',
+    'grade_tec': 'Tecnologia e Inovação',
+}
+
+def get_subject_row(sheet):
+  """
+  This function iterates through rows in the sheet and returns the row number
+  where the first cell contains a subject name from the `grade_fields` dictionary.
+  """
+  for row in sheet.iter_rows():
+    if row[0].value and row[0].value in grade_fields.values():
+      print("Notas atribuídas às disciplinas")
+      return row[0].row
+    else:
+       print("Notas NÃO atribuídas às disciplinas")
+  return None
+
+def populate_and_download(request):
+  if request.method == 'POST':
+    print("Método de download acessado")
+    selected_ano = request.POST.get('ano')
+    print("Ano selecionado:", selected_ano)
+    selected_turma = request.POST.get('turma')
+    print("Turma selecionada:", selected_turma)
+    selected_aluno = request.POST.get('aluno')
+    print("Aluno selecionado:", selected_aluno)
+
+    # Open uploaded Excel file (replace with actual filename and path)
+    filename = 'modelo_historico_em.xlsx'  # Replace with your filename
+    print("Modelo de histórico no excel aberto:", filename)
+    wb = load_workbook(os.path.join(settings.MEDIA_ROOT, filename))
+    sheet = wb.active  # Assuming you want to write to the active sheet
+
+    # Place student information (access from request.POST if available)
+    student_cell = sheet.cell(row=10, column=4)  # Replace with desired cell for student information
+    student_cell.value = request.POST.get('aluno')  # Assuming student information is in a hidden field
+
+    # Extract the first character (year indicator)
+    year_indicator = int(selected_turma[:1])
+
+    # Calculate target row and column for year data based on turma
+    target_row = year_indicator + 13  # Adjust offset if needed (currently O15, Q15, or S15)
+    print("Target row:", target_row)
+
+    column_letters = ['O', 'Q', 'S']  # Include extra letters for flexibility
+
+    # Adjust year indicator to match list index (considering offset)
+    adjusted_index = year_indicator - 1
+
+    # Check if adjusted index is within valid range
+    if 0 <= adjusted_index < len(column_letters):
+        target_col = column_letters[adjusted_index]
+        print("Target col:", target_col)
+    else:
+        target_col = column_letters[adjusted_index]
+        print("Target col missed:", target_col)
+        print("Invalid year indicator in turma:", year_indicator)
+
+    # Place grade data
+    for html_element_id, grade_field in grade_fields.items():
+      # Get grade value from the corresponding HTML element ID
+      grade_value = request.POST.get(html_element_id)
+      if grade_value:
+        # Find subject row using the get_subject_row function
+        subject_row = get_subject_row(sheet)
+
+        if subject_row:
+          subject_cell = sheet[f"{grade_field}{subject_row}"]
+          # Check if subject cell exists and corresponding field name is available
+          if subject_cell.value and subject_cell.value == grade_field:
+            grade_cell = sheet.cell(row=subject_cell.row, column=ord(selected_turma[0]))  # Adjust cell based on turma
+            grade_cell.value = grade_value
+
+    # Save the modified Excel file
+    modified_filename = 'modified_historico_em.xlsx'  # Replace with desired filename
+    print("This is the modified filename:", modified_filename)
+    modified_filepath = os.path.join(settings.MEDIA_ROOT, modified_filename)
+
+    # Print the absolute path for verification
+    print(f"Absolute path of saved file: {modified_filepath}")
+
+    # Save directly to media root (remove temporary file creation)
+    wb.save(modified_filepath)
+
+    # Set up the response (assuming you still want to serve the file for download)
+    #response = FileResponse(open(modified_filepath, 'rb'), as_attachment=True)
+
+    response = HttpResponse(modified_filepath, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+    # Return the response
+    print("Response:", response)
+    return response
+
+  # If the request method is not POST, return an empty HttpResponse
+  return HttpResponse()

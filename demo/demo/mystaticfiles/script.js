@@ -96,8 +96,71 @@ $(document).ready(function() {
         });
       };
     });
+  }})
+
+  // Recuperação dos dados na página para posterior download do histórico
+  $('#downloadForm').on('submit', function(event) {
+    console.log("Captura de dados da view via jquery iniciada");
+    event.preventDefault(); // Prevent the default form submission
+
+    // Seleção dos dados da view
+    var selectedAno = $('#ano').val();
+    var selectedTurma = $('#turma').val();
+    var selectedAluno = $('#aluno').val();
+    // Debug console logs
+    console.log("Ano selecionado capturado via jquery:", selectedAno);
+    console.log("Turma selecionada capturada via jquery:", selectedTurma);
+    console.log("Aluno selecionado capturada via jquery:", selectedAluno);
+    // Collect other data as needed
+
+    // Make an AJAX request to your Django view
+    $.ajax({
+        url: '/populate_and_download/',
+        type: 'POST',
+        headers: {
+          'X-CSRFToken': getCookie('csrftoken')  
+        },
+        data: {
+            ano: selectedAno,
+            turma: selectedTurma,
+            aluno: selectedAluno
+            // Add other data as needed
+        },
+        success: function(response) {
+          // Check for errors in the response (optional)
+          if (response.error) {
+            console.error("Erro de resposta do servidor:", response.error);
+            // Handle errors appropriately (e.g., display error message to user)
+            return;
+          }
+          
+          // Download should be triggered by the server-side logic
+          console.log("Download iniciado pelo servidor");
+        },
+        error: function(xhr, status, error) {
+            // Handle errors
+            console.error(xhr.responseText);
+        } 
+    });
+  });
+
+  // Função que extrai o token CSRF dos cookies
+  function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var cookie = cookies[i].trim();
+            // Check if the cookie name matches the CSRF token cookie name
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
   }
-});
+
 };
 });
 });
