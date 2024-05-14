@@ -1,18 +1,16 @@
 import os
 import io
-import tempfile
+import subprocess
 from django.conf import settings
 from django.db import transaction
-from django.http import JsonResponse, HttpResponse, FileResponse, HttpResponseServerError, HttpResponseBadRequest
+from django.http import HttpResponseBadRequest, JsonResponse, HttpResponse, FileResponse, HttpResponseServerError, HttpResponseRedirect
 from django.shortcuts import render, HttpResponse, redirect
 from django.core.exceptions import ValidationError
 from django.contrib import messages
 from django.db.models import Q
 from django.utils.cache import add_never_cache_headers
 from .models import AtaResultados
-from wsgiref.util import FileWrapper
 from openpyxl import load_workbook
-from xlsxwriter import Workbook
 
 # Create your views here.
 
@@ -159,18 +157,25 @@ def emitir_historico(request):
         return render(request, 'emitir_historico.html', {'anos': anos, 'selected_ano': selected_ano, 'turmas': turmas, 'alunos': alunos})
 
 def upload_file(request):
-  if request.method == 'POST':
-    uploaded_file = request.FILES['file']
-    # Validate file extension
-    if not uploaded_file.name.endswith('.xlsx'):
-      return render(request, 'upload.html', {'error': 'Formato de arquivo inválido. O formato aceito é .xlsx.'})
-    # Save the file with a fixed name (overwrite if exists)
-    filename = 'modelo_historico_em.xlsx'  # Replace with your desired name
-    with open(os.path.join(settings.MEDIA_ROOT, filename), 'wb+') as destination:
-      for chunk in uploaded_file.chunks():
-        destination.write(chunk)
-    return render(request, 'upload_file.html', {'success': 'Sucesso  no upload do arquivo!'})
-  return render(request, 'upload_file.html')
+
+    if request.method == 'POST':
+
+        uploaded_file = request.FILES['file']
+
+        # Validate file extension
+        if not uploaded_file.name.endswith('.xlsx'):
+            return render(request, 'upload.html', {'error': 'Formato de arquivo inválido. O formato aceito é .xlsx.'})
+
+        # Load the uploaded Excel file
+        wb = load_workbook(uploaded_file)
+
+        # Save the workbook back to a new Excel file with UTF-8 encoding
+        filename = 'modelo_historico_em.xlsx'  # Replace with your desired name
+        wb.save(os.path.join(settings.MEDIA_ROOT, filename))
+
+        return render(request, 'upload_file.html', {'success': 'Sucesso no upload do arquivo!'})
+
+    return render(request, 'upload_file.html')
 
 # Definição do mapeamento notas/disciplinas
 grade_fields = {  
@@ -224,6 +229,7 @@ def populate_and_download(request):
 
             # Update student information
             sheet.cell(row=10, column=4).value = selected_aluno
+            sheet.cell(row=14, column=15).value = selected_ano
 
             # Extract year indicator
             year_indicator = int(selected_turma[:1])
@@ -246,12 +252,26 @@ def populate_and_download(request):
                             grade_cell = sheet.cell(row=subject_cell.row, column=ord(selected_turma[0]))
                             grade_cell.value = grade_value
 
+            
+
             # Create a temporary file for the modified data
             with io.BytesIO() as output_buffer:
                 print("io bytes processed")
                 wb.save(output_buffer)
                 modified_data = output_buffer.getvalue()
-                output_buffer.close()
+
+                try:
+                    # Save the file locally for investigation
+                    file_path = 'temp_file.xlsx'
+                    with open(file_path, 'wb') as f:
+                        f.write(output_buffer.getvalue())            
+
+                    # Open the file using the default application (e.g., Excel)
+                    subprocess.run(['start', file_path], shell=True)
+
+                except Exception as e:
+                    # Handle the case where Excel isn't installed
+                    print("Error opening file:", e)
 
             # Set up download response
             response = FileResponse(modified_data, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')

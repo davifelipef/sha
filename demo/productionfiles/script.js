@@ -127,16 +127,23 @@ $(document).ready(function() {
             // Add other data as needed
         },
         success: function(response) {
+          
           // Check for errors in the response (optional)
           if (response.error) {
             console.error("Erro de resposta do servidor:", response.error);
             // Handle errors appropriately (e.g., display error message to user)
             return;
           }
+          console.log("Untouched response:", response)
+          console.log("Download initiated...");
           
-          // Download should be triggered by the server-side logic
-          console.log("Download iniciado pelo servidor");
-        },
+          const blob = new Blob([response], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+          const link = document.createElement('a');
+          link.href = window.URL.createObjectURL(blob);
+          link.download = 'historico.xlsx';
+          link.click();
+          URL.revokeObjectURL(link.href);
+  },    
         error: function(xhr, status, error) {
             // Handle errors
             console.error(xhr.responseText);
